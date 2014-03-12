@@ -34,5 +34,18 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 		ServiceEngineersOptimization obj = new ServiceEngineersOptimization(1, 10, 1, mu, alpha);
 				
 		obj.formLP();
+		
+		int[] n={11,11};
+		obj.addIndicatorLimits(n);
+		obj.exportModel();
+		
+		
+		System.out.println(obj.Optimize());
+		obj.printIndicators();
+		
+		//obj.printPvariables();
+		//obj.printYvariables();
+		
+		obj.cleanupModel();
 	}
 }
