@@ -14,7 +14,7 @@ import java.util.Iterator;
 public class ServiceEngineersOptimization {
 	
 	int N; //number of spare types
-	int M; //state space truncation limit
+	int[] M; //state space truncation limits
 	double lambda; //failure rate;
 	double[] mu;   //service lead time service rates, mu[0] corresponds to engenders, the rest to spares
 	double[] alpha; //probability that spare i is requested
@@ -38,14 +38,14 @@ public class ServiceEngineersOptimization {
 
 
 	public ServiceEngineersOptimization(double lambda, double[] mu, double[] alpha, double lostCost, 
-			double[] engineerPartCost, int trunc_level, boolean logging) {
+			double[] engineerPartCost, int[] trunc_level, boolean logging) {
 		super();
 		try {
 			N = mu.length - 1;
 		} catch (Exception e) {
 			N=-1;
 		}
-		M = trunc_level;
+		this.M = trunc_level;
 		this.lambda = lambda;
 		this.mu = mu;
 		this.alpha = alpha;
@@ -53,9 +53,13 @@ public class ServiceEngineersOptimization {
 		this.lostCost = lostCost;
 		this.engineerPartCost = engineerPartCost;
 		
-		M_max = 1; for(int i=0; i<=N; i++) M_max *= (M+1);
+		M_max = 1; 
+		p_mar = new double[N+1][];
+		for(int i=0; i<=N; i++){ 
+			M_max *= (M[i]+1);
+			p_mar[i] = new double[M[i]+1];
+		}
 		
-		p_mar = new double[N+1][M+1];
 		
 		this.logging = logging;
 		
@@ -87,13 +91,17 @@ public class ServiceEngineersOptimization {
         p_var 	   = new IloNumVar[M_max+1];	
         y_var 	   = new IloNumVar[M_max+1];	
 
-        I_column   = new IloColumn[N+1][M+1];	
-        I_var      = new IloNumVar[N+1][M+1];	
+        I_column   = new IloColumn[N+1][];	
+        I_var      = new IloNumVar[N+1][];	
+		for(int i=0; i<=N; i++){ 
+	        I_column[i]   = new IloColumn[M[i]+1];	
+	        I_var[i]      = new IloNumVar[M[i]+1];	
+		}
         
         IloObjective cost = model.addMinimize();
 			
     	for(int i=0; i<=N; i++)
-        	for(int j=0; j<=M; j++){
+        	for(int j=0; j<=M[i]; j++){
         		int i1 = (j>0) ? 1 : 0;
         		I_column[i][j] = model.column(cost, i1*engineerPartCost[i]);
         	}
@@ -154,7 +162,7 @@ public class ServiceEngineersOptimization {
         	for(int i1=0; i1<=N; i1++){
             	IloRange tmp_const = model.addLe(null, 0.0, "yIconst" + varIndex + i1);
             	y_column[i] = y_column[i].and(model.column(tmp_const, 1.0));
-            	if(n[i1]<M) I_column[i1][n[i1]+1] = I_column[i1][n[i1]+1].and(model.column(tmp_const, -1.0));
+            	if(n[i1]<M[i1]) I_column[i1][n[i1]+1] = I_column[i1][n[i1]+1].and(model.column(tmp_const, -1.0));
             }
 
         	// y_{ne,ns} <= p_{ne,ns} - (N+1 - I_{ne+1} - sum I_{ns+1}) 
@@ -163,7 +171,7 @@ public class ServiceEngineersOptimization {
 	        	p_column[i] = p_column[i].and(model.column(tmp_const, -1.0));
 	        	y_column[i] = y_column[i].and(model.column(tmp_const, 1.0));
 	        	for(int i1=0; i1<=N; i1++)
-		        	if(n[i1]<M) I_column[i1][n[i1]+1] = I_column[i1][n[i1]+1].and(model.column(tmp_const, -1.0));
+		        	if(n[i1]<M[i1]) I_column[i1][n[i1]+1] = I_column[i1][n[i1]+1].and(model.column(tmp_const, -1.0));
         	}
 
         	
@@ -177,10 +185,10 @@ public class ServiceEngineersOptimization {
         }
 
     	for(int i=0; i<=N; i++)
-        	for(int j=0; j<=M; j++){
+        	for(int j=0; j<=M[i]; j++){
         		IloRange tmp_const = model.addGe(null, 0.0, "IIconst" + i+j);
         		I_column[i][j] = I_column[i][j].and(model.column(tmp_const, 1.0));
-        		if(j<M)
+        		if(j<M[i])
         			I_column[i][j+1] = I_column[i][j+1].and(model.column(tmp_const, -1.0));
 
             	I_var[i][j] = model.numVar(I_column[i][j], 0, 1, IloNumVarType.Bool, "I"+i+j);
@@ -205,10 +213,12 @@ public class ServiceEngineersOptimization {
 	}
 	
 	public void setStartSolution() throws IloException{
-	     IloNumVar[] startVar = new IloNumVar[(N+1)*(M+1)];
-	     double[] startVal = new double[(N+1)*(M+1)];
+	     int maxi=0;
+		 for(int i=0; i<=N; i++) maxi += (M[i]+1);
+		 IloNumVar[] startVar = new IloNumVar[maxi];
+	     double[] startVal = new double[maxi];
 	     for (int i = 0, idx = 0; i <= N; ++i)
-	         for (int j = 0; j <= M; ++j) {
+	         for (int j = 0; j <= M[i]; ++j) {
 	             startVar[idx] = I_var[i][j];
 	             startVal[idx] = 1;
 	             ++idx;
@@ -227,7 +237,7 @@ public class ServiceEngineersOptimization {
     
     public void printIndicators() throws UnknownObjectException, IloException{
     	for(int i=0; i<=N; i++){
-        	for(int j=0; j<=M; j++)
+        	for(int j=0; j<=M[i]; j++)
         		System.out.print(model.getValue(I_var[i][j]) + "\t");
         	System.out.println();
     	}
@@ -235,7 +245,7 @@ public class ServiceEngineersOptimization {
     public void printIndicatorSums() throws UnknownObjectException, IloException{
     	for(int i=0; i<=N; i++){
         	int sum = 0;
-    		for(int j=1; j<=M; j++)
+    		for(int j=1; j<=M[i]; j++)
         		sum += Math.round(model.getValue(I_var[i][j]));
         	if(i==0) System.out.println("Number of Engineers: "  + sum);
         	else     System.out.println("Number of Parts "+i+":   " + sum);
@@ -259,8 +269,8 @@ public class ServiceEngineersOptimization {
     public void printPvariables2D() throws UnknownObjectException, IloException{
     	if(N==1){
     		int[] n = new int[2];
-    		for(int i=M; i>=0; i--){
-    			for(int j=M; j>=0; j--){
+    		for(int i=M[0]; i>=0; i--){
+    			for(int j=M[1]; j>=0; j--){
     				n[0] = i; n[1] = j;
     				int i1 = getIndex(n);
     				System.out.print("\t" + model.getValue(p_var[i1]));
@@ -278,7 +288,7 @@ public class ServiceEngineersOptimization {
     	}
     	for(int j=0; j<=N; j++){
     		System.out.print("item " + j + ":");
-    		for(int i=0; i<=M; i++)
+    		for(int i=0; i<=M[j]; i++)
     			System.out.print("\t" + p_mar[j][i]);
     		System.out.println();
     	}
@@ -323,11 +333,13 @@ public class ServiceEngineersOptimization {
     	tuneModel(defaultParamFile);
     }
 
-    protected int getIndex(int[] n){
-		int k = 0;
+    public int getIndex(int[] n){
+		int k = 0, k1=M_max;
 		for(int i=0; i<=N; i++){
-			if(n[i]>=0)
-				k = k*(M+1) + n[i];
+			if(n[i]>=0){
+				k1 /= (M[i]+1);
+				k  += k1*n[i];
+			}
 			else
 				return -1;
 		}
@@ -335,13 +347,14 @@ public class ServiceEngineersOptimization {
 		return k;
 	}
 	
-	protected int[] getIndices(int i){
+	public int[] getIndices(int i){
 		int[] tempk = new int[N+1];
 		
-		int k = i;
-		for(int j=N; j>=0; j--){
-			tempk[j] = k - (k/(M+1))*(M+1);
-			k /= (M+1);
+		int k = i, k1=M_max;
+		for(int j=0; j<=N; j++){
+			k1 = k1 / (M[j]+1);
+			tempk[j] = k/k1;
+			k -= tempk[j]*k1;
 		}
 		
 		return tempk;
