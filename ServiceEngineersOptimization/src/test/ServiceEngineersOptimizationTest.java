@@ -10,7 +10,7 @@ import OptimizationProblem.ServiceEngineersOptimization;
 public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimization{
 
 	public ServiceEngineersOptimizationTest() {
-		super(0, 0, 0, null, null);
+		super(0, null, null, 0, null, 0, false);
 	}
 
 //	@Test
@@ -26,22 +26,61 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 //	
 //	}
 
-	@Test
+	//@Test
 	public void testFormulation() throws IloException {
-		double[] mu={2.0,3.0};
+		int truncation_level=50;
+		double lambda = 10.0;
+		double[] mu={1.0,3.0};
 		double[] alpha = {0.0, 1.0};
+		double lostCost = 300;
+		double[] engineerPartCost = {1.0, 1.0};
 		
-		ServiceEngineersOptimization obj = new ServiceEngineersOptimization(1, 10, 1, mu, alpha);
+		ServiceEngineersOptimization obj = new ServiceEngineersOptimization(lambda, mu, alpha, lostCost, engineerPartCost, truncation_level, true);
 				
 		obj.formLP();
 		
-		int[] n={11,11};
-		obj.addIndicatorLimits(n);
+		int[] n={1,1};
+		//obj.addIndicatorLimits(n);
 		obj.exportModel();
 		
 		
 		System.out.println(obj.Optimize());
-		obj.printIndicators();
+		//obj.printIndicators();
+		obj.printIndicatorSums();
+		//obj.printMarginalProbabilities();
+		//obj.printPvariables2D();
+		
+		//obj.printPvariables();
+		//obj.printYvariables();
+		
+		obj.cleanupModel();
+	}
+	@Test
+	public void testMultiDimentional() throws IloException {
+		int truncation_level=8;
+		double lambda = 10.0;
+		double[] mu={1.0, 3.0, 2.0, 4.0};
+		double[] alpha = {0.0, 0.2, 0.3, 0.5};
+		double lostCost = 300;
+		double[] engineerPartCost = {1.0, 1.0, 1.0, 1.0, 1.0};
+		
+		ServiceEngineersOptimization obj = new ServiceEngineersOptimization(lambda, mu, alpha, lostCost, engineerPartCost, truncation_level, true);
+				
+		obj.formLP();
+		
+		obj.setStartSolution();
+		//obj.tuneModel();
+		obj.setParameters();
+		
+		//int[] n={1,1};
+		//obj.addIndicatorLimits(n);
+		//obj.exportModel();
+		
+		System.out.println(obj.Optimize());
+		//obj.printIndicators();
+		obj.printIndicatorSums();
+		//obj.printMarginalProbabilities();
+		//obj.printPvariables2D();
 		
 		//obj.printPvariables();
 		//obj.printYvariables();
