@@ -1,15 +1,16 @@
 package test;
 
 import static org.junit.Assert.*;
+import gurobi.GRBException;
 import ilog.concert.IloException;
 
 import org.junit.Test;
 
-import OptimizationProblem.ServiceEngineersOptimization;
+import OptimizationProblem.ServiceEngineersOptimizationGUROBI;
 
-public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimization{
+public class ServiceEngineersOptimizationGUROBITest extends ServiceEngineersOptimizationGUROBI{
 
-	public ServiceEngineersOptimizationTest() {
+	public ServiceEngineersOptimizationGUROBITest() {
 		super(0, null, null, 0, null, null, false);
 	}
 
@@ -18,7 +19,7 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 		int[] truncation_levels={3,3,3,4};
 		double[] mu={0,0,0,0};
 		
-		ServiceEngineersOptimization obj = new ServiceEngineersOptimization(0, mu, null, 0, null, truncation_levels, true);
+		ServiceEngineersOptimizationGUROBI obj = new ServiceEngineersOptimizationGUROBI(0, mu, null, 0, null, truncation_levels, true);
 				
 		int[] n = {1,1,1,4};
 		int k = obj.getIndex(n);
@@ -30,24 +31,24 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 	}
 
 	@Test
-	public void testFormulation() throws IloException {
-		int[] truncation_levels={50,10};
+	public void testFormulation() throws GRBException {
+		int[] truncation_levels={50,50};
 		double lambda = 10.0;
 		double[] mu={1.0,3.0};
 		double[] alpha = {0.0, 1.0};
 		double lostCost = 300;
 		double[] engineerPartCost = {1.0, 1.0};
 		
-		ServiceEngineersOptimization obj = new ServiceEngineersOptimization(lambda, mu, alpha, lostCost, engineerPartCost, truncation_levels, true);
+		ServiceEngineersOptimizationGUROBI obj = new ServiceEngineersOptimizationGUROBI(lambda, mu, alpha, lostCost, engineerPartCost, truncation_levels, true);
 				
-		obj.formLP();
+		obj.formLP(null);
 		
 		int[] n={1,1};
 		//obj.addIndicatorLimits(n);
 		obj.exportModel();
 		
 		
-		System.out.println(obj.Optimize());
+		obj.Optimize();
 		//obj.printIndicators();
 		obj.printIndicatorSums();
 		//obj.printMarginalProbabilities();
@@ -60,7 +61,7 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 	}
 	
 	//@Test
-	public void testMultiDimentional() throws IloException {
+	public void testMultiDimentional() throws GRBException {
 		int[] truncation_levels={20,5,5,5};
 		double lambda = 10.0;
 		double[] mu={1.0, 3.0, 2.0, 4.0};
@@ -68,11 +69,11 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 		double lostCost = 300;
 		double[] engineerPartCost = {1.0, 1.0, 1.0, 1.0, 1.0};
 		
-		ServiceEngineersOptimization obj = new ServiceEngineersOptimization(lambda, mu, alpha, lostCost, engineerPartCost, truncation_levels, true);
+		ServiceEngineersOptimizationGUROBI obj = new ServiceEngineersOptimizationGUROBI(lambda, mu, alpha, lostCost, engineerPartCost, truncation_levels, true);
 				
-		obj.formLP();
+		obj.formLP(null);
 		
-		obj.setStartSolution();
+		obj.setStartSolution(1);
 		//obj.tuneModel();
 		obj.setParameters();
 		
@@ -80,7 +81,7 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 		//obj.addIndicatorLimits(n);
 		//obj.exportModel();
 		
-		System.out.println(obj.Optimize());
+		obj.Optimize();
 		//obj.printIndicators();
 		obj.printIndicatorSums();
 		//obj.printMarginalProbabilities();
