@@ -9,7 +9,14 @@ import ilog.concert.IloRange;
 import ilog.cplex.IloCplex;
 import ilog.cplex.IloCplex.UnknownObjectException;
 
-import java.util.Iterator;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.util.Date;
+import java.util.StringTokenizer;
 
 public class ServiceEngineersOptimization {
 	
@@ -27,6 +34,9 @@ public class ServiceEngineersOptimization {
 	
 	
 	IloNumVar[][] I_var;
+	int[] optIsum, prevOptIsum;
+	int[] ll, ul;
+	
 	IloNumVar[] p_var, y_var;
 	
 	double[][] p_mar;
@@ -36,12 +46,30 @@ public class ServiceEngineersOptimization {
     public static String workpath = "/Users/andrei/Documents/Research/Service Engineers";
     static String defaultParamFile = workpath + "/cplexParameters";
 
+    Date startTime, endTime;
+    long computation_time;
+    
+    public void StartTimer(){
+    	startTime = new Date();
+    }
+
+    public void ElapsedTime(){
+  	   Date curTime = new Date();
+ 	   System.out.println("Elapsed Time: " + (curTime.getTime() - startTime.getTime())/1000 + " sec.");
+     }
+
+    public void StopTimer(){
+ 	   endTime = new Date();
+	   computation_time = (endTime.getTime() - startTime.getTime());
+	   System.out.println("Optimization Time: " + computation_time/1000 + " sec.");
+    }
+
 
 	public ServiceEngineersOptimization(double lambda, double[] mu, double[] alpha, double lostCost, 
 			double[] engineerPartCost, int[] trunc_level, boolean logging) {
 		super();
 		try {
-			N = mu.length - 1;
+			N = trunc_level.length - 1;
 		} catch (Exception e) {
 			N=-1;
 		}
@@ -63,14 +91,89 @@ public class ServiceEngineersOptimization {
 		
 		this.logging = logging;
 		
+		this.optIsum = null;
+		this.prevOptIsum = null;
+		
+		this.ll=null;
+		this.ul=null;
+		
 
 	}
 
 	
 	public static void main(String[] args){
 	
+		int N; //number of spare types
+		int[] M = null; //state space truncation limits
+		double lambda = 0; //failure rate;
+		double[] mu = null;   //service lead time service rates, mu[0] corresponds to engenders, the rest to spares
+		double[] alpha = null; //probability that spare i is requested
+		double[] engineerPartCost = null;
+		double lostCost = 0;
 		
-	
+			
+		String inputFileName = args[0];
+		BufferedReader input = null;
+		try {
+			input = new BufferedReader(new InputStreamReader(new FileInputStream(inputFileName), "utf-8"));
+		} catch (UnsupportedEncodingException | FileNotFoundException e) {
+			System.err.println("Problem with input file: openning file");
+			e.printStackTrace();
+	        System.exit(1);
+		}
+	   	
+		//read lambda
+	    StringTokenizer s1 = null;
+		try {
+			//read N
+		    s1 = new StringTokenizer(input.readLine(), "\t");
+		    s1.nextToken(); N = Integer.parseInt(s1.nextToken());
+	        //read M[i]
+		    M = new int[N+1];
+		    s1 = new StringTokenizer(input.readLine(), "\t");
+		    s1.nextToken(); for(int i=0; i<=N; i++) M[i] = Integer.parseInt(s1.nextToken());
+			//read lambda
+		    s1 = new StringTokenizer(input.readLine(), "\t");
+		    s1.nextToken(); lambda = Double.parseDouble(s1.nextToken());
+	        //read alpha
+		    alpha = new double[N+1];
+		    s1 = new StringTokenizer(input.readLine(), "\t");
+		    s1.nextToken(); for(int i=0; i<=N; i++) alpha[i] = Double.parseDouble(s1.nextToken());
+	        //read mu
+		    mu = new double[N+1];
+		    s1 = new StringTokenizer(input.readLine(), "\t");
+		    s1.nextToken(); for(int i=0; i<=N; i++) mu[i] = Double.parseDouble(s1.nextToken());
+			//read lost cost
+		    s1 = new StringTokenizer(input.readLine(), "\t");
+		    s1.nextToken(); lostCost = Double.parseDouble(s1.nextToken());
+	        //read costs
+		    engineerPartCost = new double[N+1];
+		    s1 = new StringTokenizer(input.readLine(), "\t");
+		    s1.nextToken(); for(int i=0; i<=N; i++) engineerPartCost[i] = Double.parseDouble(s1.nextToken());
+		} catch (IOException e) {
+			System.err.println("Problem with input file: reading file, check the format");
+			e.printStackTrace();
+	        System.exit(1);		
+	    }		
+		
+		ServiceEngineersOptimization opt = new ServiceEngineersOptimization(lambda, mu, alpha, lostCost, engineerPartCost, M, true);
+
+		try {
+			opt.formLP();
+		
+		
+		
+		
+		
+		
+		
+		} catch (IloException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		
+		
 	
 	};
 	
@@ -194,7 +297,7 @@ public class ServiceEngineersOptimization {
             	I_var[i][j] = model.numVar(I_column[i][j], 0, 1, IloNumVarType.Bool, "I"+i+j);
         	}
 
-    	model.exportModel(workpath + "/model1.lp");
+    	//model.exportModel(workpath + "/model1.lp");
         	
 	}
 	
@@ -203,12 +306,20 @@ public class ServiceEngineersOptimization {
 	}
 	
 
-	public void addIndicatorLimits(int[] n) throws IloException{
-    	for(int i=0; i<=N; i++){
-        	for(int j=0; j<=n[i]; j++)
-        		I_var[i][j].setLB(1);
-        	//for(int j=n[i]+1; j<=M; j++)
-        	//	I_var[i][j].setUB(0);
+	public void setIndicatorLimits(int[] ll, int[] ul) throws IloException{
+    	this.ll = ll;
+    	this.ul = ul;
+		for(int i=0; i<=N; i++){
+    		for(int j=0; j<=M[i]; j++){
+        		I_var[i][j].setLB(0);
+        		I_var[i][j].setUB(1);
+    		}
+        	if(ll!=null)
+	    		for(int j=0; j<=this.ll[i]; j++)
+	        		I_var[i][j].setLB(1);
+        	if(ul!=null)
+	        	for(int j=this.ul[i]+1; j<=M[i]; j++)
+	        		I_var[i][j].setUB(0);
     	}
 	}
 	
@@ -228,12 +339,33 @@ public class ServiceEngineersOptimization {
 	     startVal = null;	     
 	}
 
-	public double Optimize() throws IloException {
+	public double optimize() throws IloException {
         //model.addMIP
-    	if ( model.solve() ) return model.getObjValue();
+    	if ( model.solve() ) {
+        	if(optIsum==null) optIsum = new int[N+1];
+    		for(int i=0; i<=N; i++){
+            	optIsum[i] = 0;
+        		for(int j=1; j<=M[i]; j++) optIsum[i] += Math.round(model.getValue(I_var[i][j]));
+        	}
+    		return model.getObjValue();
+    	}
 		return -100000000; //if not solved
     }
     
+	public boolean doIteration() throws IloException{
+		boolean ready = true;
+		for(int i=0; i<=N; i++){
+			if(optIsum[i] == ul[i]){
+				ul[i]++; ll[i]++;
+				ready =  false;
+			}else if(optIsum[i] == ll[i]){
+				ul[i]--; ll[i]--;
+				ready =  false;
+			}
+		}
+		if(!ready) this.setIndicatorLimits(this.ll, this.ul);
+		return ready;
+	}
     
     public void printIndicators() throws UnknownObjectException, IloException{
     	for(int i=0; i<=N; i++){
@@ -294,14 +426,6 @@ public class ServiceEngineersOptimization {
     	}
     }
 
-//    public double getDual(int rowIndex) throws IloException{
-//    	return model.getDual(constraint[rowIndex]);
-//    }
-//
-//    public double getSlack(int rowIndex) throws IloException{
-//    	return model.getSlack(constraint[rowIndex]);
-//    }
-//    
     public void cleanupModel() throws IloException{
     	model.clearModel();
     	model.end();
@@ -360,5 +484,11 @@ public class ServiceEngineersOptimization {
 		return tempk;
 	}
 	
+	public void segLoggingOff(){
+		if(model!=null){
+			model.setOut(null);
+			model.setWarning(null);
+		}
+	}
 	
 }

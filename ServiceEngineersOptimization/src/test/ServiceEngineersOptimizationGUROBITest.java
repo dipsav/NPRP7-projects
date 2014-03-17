@@ -30,7 +30,7 @@ public class ServiceEngineersOptimizationGUROBITest extends ServiceEngineersOpti
 	
 	}
 
-	@Test
+	//@Test
 	public void testFormulation() throws GRBException {
 		int[] truncation_levels={50,50};
 		double lambda = 10.0;
@@ -60,12 +60,12 @@ public class ServiceEngineersOptimizationGUROBITest extends ServiceEngineersOpti
 		obj.cleanupModel();
 	}
 	
-	//@Test
+	@Test
 	public void testMultiDimentional() throws GRBException {
-		int[] truncation_levels={20,5,5,5};
+		int[] truncation_levels={30,5,5,5};
 		double lambda = 10.0;
 		double[] mu={1.0, 3.0, 2.0, 4.0};
-		double[] alpha = {0.0, 0.2, 0.3, 0.5};
+		double[] alpha = {0.0, 0.2, 0.3, 0.2};
 		double lostCost = 300;
 		double[] engineerPartCost = {1.0, 1.0, 1.0, 1.0, 1.0};
 		
@@ -73,13 +73,14 @@ public class ServiceEngineersOptimizationGUROBITest extends ServiceEngineersOpti
 				
 		obj.formLP(null);
 		
-		obj.setStartSolution(1);
+		//obj.setStartSolution(1);
 		//obj.tuneModel();
-		obj.setParameters();
+		//obj.setParameters();
 		
-		//int[] n={1,1};
-		//obj.addIndicatorLimits(n);
-		//obj.exportModel();
+		int[] ll={18,4,5,5};
+		int[] ul={18,4,5,5};
+		obj.addIndicatorLimits(ll,null);
+		obj.exportModel();
 		
 		obj.Optimize();
 		//obj.printIndicators();

@@ -3,9 +3,11 @@ package OptimizationProblem;
 import gurobi.*;
 
 import ilog.concert.IloColumn;
+import ilog.concert.IloException;
 import ilog.concert.IloNumVar;
 
 import java.util.Iterator;
+import java.util.StringTokenizer;
 
 public class ServiceEngineersOptimizationGUROBI {
 	
@@ -36,7 +38,7 @@ public class ServiceEngineersOptimizationGUROBI {
 
     
     public static String workpath = "/Users/andrei/Documents/Research/Service Engineers";
-    static String defaultParamFile = workpath + "/cplexParameters";
+    static String defaultParamFile = workpath + "/gurobiParameters.prm";
 
 
 	public ServiceEngineersOptimizationGUROBI(double lambda, double[] mu, double[] alpha, double lostCost, 
@@ -216,9 +218,22 @@ public class ServiceEngineersOptimizationGUROBI {
 	public void setStartSolution(int common_start) throws GRBException{
 	     for (int i = 0, idx = 0; i <= N; ++i)
 	         for (int j = 0; j <= M[i]; ++j) {
-	             I_var[i][j].set(GRB.DoubleAttr.X, common_start);
+	             I_var[i][j].set(GRB.DoubleAttr.Start, common_start);
 	         }
 	}
+	
+	public void addIndicatorLimits(int[] ll, int[] ul) throws GRBException{
+    	for(int i=0; i<=N; i++){
+        	if(ll!=null)
+	    		for(int j=0; j<=ll[i]; j++)
+	        		I_var[i][j].set(GRB.DoubleAttr.LB, 1.0);
+        	if(ul!=null)
+	        	for(int j=ul[i]+1; j<=M[i]; j++)
+	        		I_var[i][j].set(GRB.DoubleAttr.UB, 0.0);
+    	}
+    	model.update();
+	}
+
 
 	public void Optimize() throws GRBException {
         model.optimize();
@@ -308,10 +323,11 @@ public class ServiceEngineersOptimizationGUROBI {
         }
     }
     public void tuneModel(String fixedfile) throws GRBException{
-        if ( fixedfile != null ) {
+        if ( fixedfile != null && fixedfile.contains(".prm")) {
            	model.tune();
-           	env.writeParams(fixedfile);
-            System.out.println("Tuned parameters written to file '" +
+           	//env.writeParams(fixedfile);
+           	model.write(fixedfile);
+           	System.out.println("Tuned parameters written to file '" +
             		fixedfile + "'");
          }
     }

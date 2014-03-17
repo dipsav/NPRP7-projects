@@ -1,6 +1,9 @@
 package test;
 
 import static org.junit.Assert.*;
+
+import java.util.Date;
+
 import ilog.concert.IloException;
 
 import org.junit.Test;
@@ -29,7 +32,7 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 	
 	}
 
-	@Test
+	//@Test
 	public void testFormulation() throws IloException {
 		int[] truncation_levels={50,10};
 		double lambda = 10.0;
@@ -47,7 +50,7 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 		obj.exportModel();
 		
 		
-		System.out.println(obj.Optimize());
+		System.out.println(obj.optimize());
 		//obj.printIndicators();
 		obj.printIndicatorSums();
 		//obj.printMarginalProbabilities();
@@ -59,28 +62,43 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 		obj.cleanupModel();
 	}
 	
-	//@Test
+	@Test
 	public void testMultiDimentional() throws IloException {
-		int[] truncation_levels={20,5,5,5};
+		int[] truncation_levels={30,10,10,10};
 		double lambda = 10.0;
-		double[] mu={1.0, 3.0, 2.0, 4.0};
-		double[] alpha = {0.0, 0.2, 0.3, 0.5};
+		double[] mu={1.0, 3.0, 2.0, 4.0, 2.0};
+		double[] alpha = {0.0, 0.2, 0.3, 0.2, 0.3};
 		double lostCost = 300;
 		double[] engineerPartCost = {1.0, 1.0, 1.0, 1.0, 1.0};
 		
+		
 		ServiceEngineersOptimization obj = new ServiceEngineersOptimization(lambda, mu, alpha, lostCost, engineerPartCost, truncation_levels, true);
-				
+		obj.StartTimer();
+		
 		obj.formLP();
 		
 		obj.setStartSolution();
 		//obj.tuneModel();
 		obj.setParameters();
 		
-		//int[] n={1,1};
-		//obj.addIndicatorLimits(n);
+		int[] ll={0,0,0,0};
+		int[] ul={2,2,2,2};
+		obj.setIndicatorLimits(ll,ul);
 		//obj.exportModel();
+		obj.segLoggingOff();
 		
-		System.out.println(obj.Optimize());
+		boolean ready = false;
+		while(!ready){
+			//obj.exportModel();
+			System.out.println("Curent objective: " + obj.optimize());
+			//obj.printIndicatorSums();
+			ready = obj.doIteration();
+			obj.ElapsedTime();
+		}
+
+		//obj.optimize();
+
+		//System.out.println(obj.optimize());
 		//obj.printIndicators();
 		obj.printIndicatorSums();
 		//obj.printMarginalProbabilities();
@@ -88,6 +106,8 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 		
 		//obj.printPvariables();
 		//obj.printYvariables();
+		
+		obj.StopTimer();
 		
 		obj.cleanupModel();
 	}
