@@ -48,7 +48,7 @@ public class ServiceEngineersOptimizationGUROBITest extends ServiceEngineersOpti
 		obj.exportModel();
 		
 		
-		obj.Optimize();
+		obj.optimize();
 		//obj.printIndicators();
 		obj.printIndicatorSums();
 		//obj.printMarginalProbabilities();
@@ -62,29 +62,45 @@ public class ServiceEngineersOptimizationGUROBITest extends ServiceEngineersOpti
 	
 	@Test
 	public void testMultiDimentional() throws GRBException {
-		int[] truncation_levels={30,5,5,5};
+		int[] truncation_levels={30,10,10,10,10};
 		double lambda = 10.0;
-		double[] mu={1.0, 3.0, 2.0, 4.0};
-		double[] alpha = {0.0, 0.2, 0.3, 0.2};
+		double[] mu={1.0, 3.0, 2.0, 3.0, 2.0};
+		double[] alpha = {0.0, 0.2, 0.3, 0.2, 0.3};
 		double lostCost = 300;
 		double[] engineerPartCost = {1.0, 1.0, 1.0, 1.0, 1.0};
 		
 		ServiceEngineersOptimizationGUROBI obj = new ServiceEngineersOptimizationGUROBI(lambda, mu, alpha, lostCost, engineerPartCost, truncation_levels, true);
-				
+		obj.StartTimer();		
+		
 		obj.formLP(null);
 		
 		//obj.setStartSolution(1);
 		//obj.tuneModel();
 		//obj.setParameters();
 		
-		int[] ll={18,4,5,5};
-		int[] ul={18,4,5,5};
-		obj.addIndicatorLimits(ll,null);
-		obj.exportModel();
+		int[] ll={0,0,0,0,0};
+		int[] ul={2,2,2,2,2};
+		obj.setIndicatorLimits(ll,ul);
+		//obj.exportModel();
+		obj.setLoggingOff();
 		
-		obj.Optimize();
+		boolean ready = false;
+		while(!ready){
+			//obj.exportModel();
+			System.out.println("Curent objective: " + obj.optimize());
+			obj.printIndicatorShort();
+			//obj.printIndicatorSums();
+			ready = obj.doIteration();
+			obj.ElapsedTime();
+		}
+
+		//obj.addIndicatorLimits(ll,null);
+		//obj.exportModel();
+		
+		//obj.optimize();
 		//obj.printIndicators();
 		obj.printIndicatorSums();
+		obj.StopTimer();
 		//obj.printMarginalProbabilities();
 		//obj.printPvariables2D();
 		

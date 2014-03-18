@@ -213,6 +213,7 @@ public class ServiceEngineersOptimization {
     	for(int i=0; i<M_max; i++){
         	int[] n = getIndices(i);
         	String varIndex = "";  for(int j=0; j<=N; j++) varIndex += n[j];
+        	//p_var = model.numVar(lb, ub, IloNumVarType.Float, "xname");
         	
     		p_column[i] = model.column(cost, lostCost); //TODO update coefficient
         	
@@ -383,6 +384,11 @@ public class ServiceEngineersOptimization {
         	else     System.out.println("Number of Parts "+i+":   " + sum);
     	}
     }
+    public void printIndicatorShort(){
+    	for(int i=0; i<=N; i++) System.out.print(optIsum[i] + "\t");
+    	System.out.println();
+    }
+
     public void printYvariables() throws UnknownObjectException, IloException{
     	for(int i=0; i<M_max; i++){
         	int[] n = getIndices(i);	
@@ -437,11 +443,8 @@ public class ServiceEngineersOptimization {
 
     
     public void setParametersFromFile(String fixedfile) throws IloException{
-        IloCplex.ParameterSet paramset = null;
         if ( fixedfile != null ) {
            model.readParam(fixedfile);
-           paramset = model.getParameterSet();
-           model.setDefaults();
         }
     }
     public void tuneModel(String fixedfile) throws IloException{
@@ -484,7 +487,7 @@ public class ServiceEngineersOptimization {
 		return tempk;
 	}
 	
-	public void segLoggingOff(){
+	public void setLoggingOff(){
 		if(model!=null){
 			model.setOut(null);
 			model.setWarning(null);

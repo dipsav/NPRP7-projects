@@ -64,9 +64,9 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 	
 	@Test
 	public void testMultiDimentional() throws IloException {
-		int[] truncation_levels={30,10,10,10};
+		int[] truncation_levels={30,10,10,10,10};
 		double lambda = 10.0;
-		double[] mu={1.0, 3.0, 2.0, 4.0, 2.0};
+		double[] mu={1.0, 3.0, 2.0, 3.0, 2.0};
 		double[] alpha = {0.0, 0.2, 0.3, 0.2, 0.3};
 		double lostCost = 300;
 		double[] engineerPartCost = {1.0, 1.0, 1.0, 1.0, 1.0};
@@ -81,17 +81,17 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 		//obj.tuneModel();
 		obj.setParameters();
 		
-		int[] ll={0,0,0,0};
-		int[] ul={2,2,2,2};
+		int[] ll={0,0,0,0,0};
+		int[] ul={2,2,2,2,2};
 		obj.setIndicatorLimits(ll,ul);
 		//obj.exportModel();
-		obj.segLoggingOff();
+		obj.setLoggingOff();
 		
 		boolean ready = false;
 		while(!ready){
 			//obj.exportModel();
 			System.out.println("Curent objective: " + obj.optimize());
-			//obj.printIndicatorSums();
+			obj.printIndicatorShort();
 			ready = obj.doIteration();
 			obj.ElapsedTime();
 		}

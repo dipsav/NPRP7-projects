@@ -2,12 +2,7 @@ package OptimizationProblem;
 
 import gurobi.*;
 
-import ilog.concert.IloColumn;
-import ilog.concert.IloException;
-import ilog.concert.IloNumVar;
-
-import java.util.Iterator;
-import java.util.StringTokenizer;
+import java.util.Date;
 
 public class ServiceEngineersOptimizationGUROBI {
 	
@@ -28,6 +23,9 @@ public class ServiceEngineersOptimizationGUROBI {
 	GRBVar[][] I_var;
 	@SuppressWarnings("restriction")
 	GRBVar[] p_var, y_var;
+	int[] optIsum;
+	int[] ll, ul;
+
 	
 	double[][] p_mar;
 	
@@ -35,6 +33,9 @@ public class ServiceEngineersOptimizationGUROBI {
 	GRBModel  model;
 	//IloCplex model;
     GRBEnv    env;
+
+    Date startTime, endTime;
+    long computation_time;
 
     
     public static String workpath = "/Users/andrei/Documents/Research/Service Engineers";
@@ -65,6 +66,13 @@ public class ServiceEngineersOptimizationGUROBI {
 		}
 
 		this.logging = logging;
+		
+		this.optIsum = null;
+		
+		this.ll=null;
+		this.ul=null;
+		
+
 		
 
 	}
@@ -233,12 +241,50 @@ public class ServiceEngineersOptimizationGUROBI {
     	}
     	model.update();
 	}
+	
+	public void setIndicatorLimits(int[] ll, int[] ul) throws GRBException{
+    	this.ll = ll;
+    	this.ul = ul;
+		for(int i=0; i<=N; i++){
+    		for(int j=0; j<=M[i]; j++){
+        		I_var[i][j].set(GRB.DoubleAttr.LB, 0.0);
+        		I_var[i][j].set(GRB.DoubleAttr.UB, 1.0);
+    		}
+        	if(ll!=null)
+	    		for(int j=0; j<=this.ll[i]; j++)
+	        		I_var[i][j].set(GRB.DoubleAttr.LB, 1.0);
+        	if(ul!=null)
+	        	for(int j=this.ul[i]+1; j<=M[i]; j++)
+	        		I_var[i][j].set(GRB.DoubleAttr.UB, 0.0);
+    	}
+		model.update();
+	}
 
 
-	public void Optimize() throws GRBException {
-        model.optimize();
+	public double optimize() throws GRBException {
+    	model.optimize();
+		if(optIsum==null) optIsum = new int[N+1];
+		for(int i=0; i<=N; i++){
+        	optIsum[i] = 0;
+    		for(int j=1; j<=M[i]; j++) optIsum[i] += Math.round(I_var[i][j].get(GRB.DoubleAttr.X));
+    	}
+		return model.get(GRB.DoubleAttr.ObjVal);
     }
     
+	public boolean doIteration() throws GRBException{
+		boolean ready = true;
+		for(int i=0; i<=N; i++){
+			if(optIsum[i] == ul[i]){
+				ul[i]++; ll[i]++;
+				ready =  false;
+			}else if(optIsum[i] == ll[i]){
+				ul[i]--; ll[i]--;
+				ready =  false;
+			}
+		}
+		if(!ready) this.setIndicatorLimits(this.ll, this.ul);
+		return ready;
+	}
     
     public void printIndicators() throws GRBException{
     	for(int i=0; i<=N; i++){
@@ -255,6 +301,10 @@ public class ServiceEngineersOptimizationGUROBI {
         	if(i==0) System.out.println("Number of Engineers: "  + sum);
         	else     System.out.println("Number of Parts "+i+":   " + sum);
     	}
+    }
+    public void printIndicatorShort(){
+    	for(int i=0; i<=N; i++) System.out.print(optIsum[i] + "\t");
+    	System.out.println();
     }
     public void printYvariables() throws GRBException{
     	for(int i=0; i<M_max; i++){
@@ -363,5 +413,27 @@ public class ServiceEngineersOptimizationGUROBI {
 		return tempk;
 	}
 	
+    public void StartTimer(){
+    	startTime = new Date();
+    }
+
+    public void ElapsedTime(){
+  	   Date curTime = new Date();
+ 	   System.out.println("Elapsed Time: " + (curTime.getTime() - startTime.getTime())/1000 + " sec.");
+     }
+
+    public void StopTimer(){
+ 	   endTime = new Date();
+	   computation_time = (endTime.getTime() - startTime.getTime());
+	   System.out.println("Optimization Time: " + computation_time/1000 + " sec.");
+    }
+
+	public void setLoggingOff() throws GRBException{
+		if(model!=null){
+			model.getEnv().set(GRB.IntParam.OutputFlag, 0);
+		}
+	}
+
+
 	
 }
