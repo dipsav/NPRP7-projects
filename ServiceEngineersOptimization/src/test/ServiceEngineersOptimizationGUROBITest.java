@@ -62,7 +62,7 @@ public class ServiceEngineersOptimizationGUROBITest extends ServiceEngineersOpti
 	
 	@Test
 	public void testMultiDimentional() throws GRBException {
-		int[] truncation_levels={30,10,10,10,10};
+		int[] truncation_levels={30,8,8,8,8};
 		double lambda = 10.0;
 		double[] mu={1.0, 3.0, 2.0, 3.0, 2.0};
 		double[] alpha = {0.0, 0.2, 0.3, 0.2, 0.3};

@@ -32,9 +32,9 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 	
 	}
 
-	//@Test
+//	@Test
 	public void testFormulation() throws IloException {
-		int[] truncation_levels={50,10};
+		int[] truncation_levels={5,5};
 		double lambda = 10.0;
 		double[] mu={1.0,3.0};
 		double[] alpha = {0.0, 1.0};
@@ -43,7 +43,8 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 		
 		ServiceEngineersOptimization obj = new ServiceEngineersOptimization(lambda, mu, alpha, lostCost, engineerPartCost, truncation_levels, true);
 				
-		obj.formLP();
+		obj.formLPbyRows();
+		//obj.formLP();
 		
 		int[] n={1,1};
 		//obj.addIndicatorLimits(n);
@@ -64,7 +65,7 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 	
 	@Test
 	public void testMultiDimentional() throws IloException {
-		int[] truncation_levels={30,10,10,10,10};
+		int[] truncation_levels={30,8,8,8,8};
 		double lambda = 10.0;
 		double[] mu={1.0, 3.0, 2.0, 3.0, 2.0};
 		double[] alpha = {0.0, 0.2, 0.3, 0.2, 0.3};
@@ -75,7 +76,7 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 		ServiceEngineersOptimization obj = new ServiceEngineersOptimization(lambda, mu, alpha, lostCost, engineerPartCost, truncation_levels, true);
 		obj.StartTimer();
 		
-		obj.formLP();
+		obj.formLPbyRows();
 		
 		obj.setStartSolution();
 		//obj.tuneModel();
@@ -85,7 +86,7 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 		int[] ul={2,2,2,2,2};
 		obj.setIndicatorLimits(ll,ul);
 		//obj.exportModel();
-		obj.setLoggingOff();
+		//obj.setLoggingOff();
 		
 		boolean ready = false;
 		while(!ready){

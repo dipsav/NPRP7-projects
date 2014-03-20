@@ -2,6 +2,7 @@ package OptimizationProblem;
 
 import ilog.concert.IloColumn;
 import ilog.concert.IloException;
+import ilog.concert.IloLinearNumExpr;
 import ilog.concert.IloNumVar;
 import ilog.concert.IloNumVarType;
 import ilog.concert.IloObjective;
@@ -202,7 +203,8 @@ public class ServiceEngineersOptimization {
 		}
         
         IloObjective cost = model.addMinimize();
-			
+        //IloLinearNumExpr cost = model.linearNumExpr();
+        
     	for(int i=0; i<=N; i++)
         	for(int j=0; j<=M[i]; j++){
         		int i1 = (j>0) ? 1 : 0;
@@ -210,10 +212,14 @@ public class ServiceEngineersOptimization {
         	}
 
     	IloRange norm_constraint = model.addEq(null, 1.0, "normConst");
+    	//IloLinearNumExpr norm_constraint = model.linearNumExpr();
+    	
     	for(int i=0; i<M_max; i++){
         	int[] n = getIndices(i);
         	String varIndex = "";  for(int j=0; j<=N; j++) varIndex += n[j];
-        	//p_var = model.numVar(lb, ub, IloNumVarType.Float, "xname");
+        	
+        	p_var[i] = model.numVar(0.0, 1.0, IloNumVarType.Float, "p" + varIndex);
+        	y_var[i] = model.numVar(0.0, 1.0, IloNumVarType.Float, "y" + varIndex);
         	
     		p_column[i] = model.column(cost, lostCost); //TODO update coefficient
         	
@@ -221,7 +227,8 @@ public class ServiceEngineersOptimization {
 
         	//normalization constraint
         	p_column[i] = p_column[i].and( model.column(norm_constraint, 1.0));
-
+        	//norm_constraint.addTerm(1.0, p_var[i]);
+        	
         	//equilibrium constraints
         	constraint[i] = model.addEq(null, 0.0, "eqConst"+varIndex);
         	
@@ -297,6 +304,132 @@ public class ServiceEngineersOptimization {
 
             	I_var[i][j] = model.numVar(I_column[i][j], 0, 1, IloNumVarType.Bool, "I"+i+j);
         	}
+
+    	//model.exportModel(workpath + "/model1.lp");
+        	
+	}
+	
+	public void formLPbyRows() throws IloException{
+	    IloLinearNumExpr[] constraint;
+
+	    model = new IloCplex();
+		if(!logging){
+			model.setOut(null);
+			model.setWarning(null);
+		}
+        constraint = new IloLinearNumExpr[M_max+1];
+        
+        p_var 	   = new IloNumVar[M_max+1];	
+        y_var 	   = new IloNumVar[M_max+1];	
+
+        I_var      = new IloNumVar[N+1][];	
+		for(int i=0; i<=N; i++){ 
+	        I_var[i]      = new IloNumVar[M[i]+1];	
+        	for(int j=0; j<=M[i]; j++)
+            	I_var[i][j] = model.numVar(0, 1, IloNumVarType.Bool, "I"+i + "" + j);
+		}
+        
+        IloLinearNumExpr cost = model.linearNumExpr();
+        
+    	for(int i=0; i<=N; i++)
+        	for(int j=0; j<=M[i]; j++){
+        		int i1 = (j>0) ? 1 : 0;
+        		cost.addTerm(i1*engineerPartCost[i], I_var[i][j]);
+        	}
+
+    	IloLinearNumExpr norm_constraint = model.linearNumExpr();
+    	
+    	for(int i=0; i<M_max; i++){
+        	int[] n = getIndices(i);
+        	String varIndex = "";  for(int j=0; j<=N; j++) varIndex += n[j];
+        	
+        	p_var[i] = model.numVar(0.0, 1.0, IloNumVarType.Float, "p" + varIndex);
+        	y_var[i] = model.numVar(0.0, 1.0, IloNumVarType.Float, "y" + varIndex);
+        	
+        	cost.addTerm(lostCost, p_var[i]); //TODO update coefficient
+        	cost.addTerm(-lostCost, y_var[i]); //TODO update coefficient
+        	
+        	//normalization constraint
+        	norm_constraint.addTerm(1.0, p_var[i]);
+        	
+        	//equilibrium constraints
+        	constraint[i] = model.linearNumExpr();
+        	
+        	constraint[i].addTerm(lambda, y_var[i]);
+        	double coeff = 0;
+        	for(int j=0; j<=N; j++){
+        		coeff += n[j]*mu[j];
+        		n[j]--;
+            	int i1 = getIndex(n);
+            	if(i1>=0)
+            		constraint[i1].addTerm(-(n[j]+1)*mu[j], p_var[i]);
+            	n[j]++;
+        	}
+        	constraint[i].addTerm(coeff, p_var[i]);
+        	
+        	n[0]--;
+        	for(int j=1; j<=N; j++){
+        		n[j]--;
+            	int i1 = getIndex(n);
+            	if(i1>=0)
+            		constraint[i].addTerm(-lambda*alpha[j], y_var[i1]);
+            	n[j]++;
+        	}
+        	n[0]++;        	
+        	
+        	// y_{ne,ns} <= p_{ne,ns}
+        	{
+            	IloLinearNumExpr tmp_const = model.linearNumExpr();
+            	tmp_const.addTerm(-1.0, p_var[i]);
+            	tmp_const.addTerm( 1.0, y_var[i]);
+            	model.addLe(tmp_const, 0.0, "yLep_const" + varIndex);
+        	}
+        	
+        	// p_{ne,ns} <= I_ne and p_{ne,ns} <= I_ns
+        	for(int i1=0; i1<=N; i1++){
+        		IloLinearNumExpr tmp_const = model.linearNumExpr();
+        		tmp_const.addTerm( 1.0, p_var[i]);
+            	tmp_const.addTerm(-1.0, I_var[i1][n[i1]]);
+            	model.addLe(tmp_const, 0.0, "pIconst" + varIndex + i1);
+            }
+
+        	// y_{ne,ns} <= I_{ne+1} and p_{ne,ns} <= I_{ns+1}
+        	for(int i1=0; i1<=N; i1++){
+        		IloLinearNumExpr tmp_const = model.linearNumExpr();
+        		tmp_const.addTerm( 1.0, y_var[i]);
+        		if(n[i1]<M[i1]) tmp_const.addTerm( -1.0, I_var[i1][n[i1]+1]); 
+            	model.addLe(tmp_const, 0.0, "yIconst" + varIndex + i1);
+            }
+
+        	// y_{ne,ns} <= p_{ne,ns} - (N+1 - I_{ne+1} - sum I_{ns+1}) 
+        	{
+        		IloLinearNumExpr tmp_const = model.linearNumExpr();
+            	tmp_const.addTerm(-1.0, p_var[i]);
+            	tmp_const.addTerm( 1.0, y_var[i]);
+	        	for(int i1=0; i1<=N; i1++)
+		        	if(n[i1]<M[i1]) tmp_const.addTerm( -1.0, I_var[i1][n[i1]+1]);
+            	model.addGe(tmp_const, -(N+1), "ypIconst" + varIndex);
+        	}
+    	}
+
+    	for(int i=0; i<M_max; i++){
+        	int[] n = getIndices(i);
+        	String varIndex = "";  for(int j=0; j<=N; j++) varIndex += n[j];
+			model.addEq(constraint[i], 0.0, "eqConst"+varIndex);
+        }
+    	
+
+    	for(int i=0; i<=N; i++)
+        	for(int j=0; j<=M[i]; j++){
+        		IloLinearNumExpr tmp_const = model.linearNumExpr();
+        		tmp_const.addTerm(1.0, I_var[i][j]);
+        		if(j<M[i])
+        			tmp_const.addTerm(-1.0, I_var[i][j+1]);
+        		model.addGe(tmp_const, 0.0, "IIconst" + i + "" + j);
+        	}
+    	
+    	model.addMinimize(cost);
+    	model.addEq(norm_constraint, 1.0, "normConst");
 
     	//model.exportModel(workpath + "/model1.lp");
         	
