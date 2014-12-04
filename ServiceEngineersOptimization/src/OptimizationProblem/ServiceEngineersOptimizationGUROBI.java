@@ -1,8 +1,16 @@
 package OptimizationProblem;
 
 import gurobi.*;
+import ilog.concert.IloException;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.util.Date;
+import java.util.StringTokenizer;
 
 public class ServiceEngineersOptimizationGUROBI {
 	
@@ -80,7 +88,75 @@ public class ServiceEngineersOptimizationGUROBI {
 	
 	public static void main(String[] args){
 	
+		int N; //number of spare types
+		int[] M = null; //state space truncation limits
+		double lambda = 0; //failure rate;
+		double[] mu = null;   //service lead time service rates, mu[0] corresponds to engenders, the rest to spares
+		double[] alpha = null; //probability that spare i is requested
+		double[] engineerPartCost = null;
+		double lostCost = 0;
 		
+			
+		String inputFileName = args[0];
+		BufferedReader input = null;
+		try {
+			input = new BufferedReader(new InputStreamReader(new FileInputStream(inputFileName), "utf-8"));
+		} catch (UnsupportedEncodingException | FileNotFoundException e) {
+			System.err.println("Problem with input file: openning file");
+			e.printStackTrace();
+	        System.exit(1);
+		}
+	   	
+		//read lambda
+	    StringTokenizer s1 = null;
+		try {
+			//read N
+		    s1 = new StringTokenizer(input.readLine(), "\t");
+		    s1.nextToken(); N = Integer.parseInt(s1.nextToken());
+	        //read M[i]
+		    M = new int[N+1];
+		    s1 = new StringTokenizer(input.readLine(), "\t");
+		    s1.nextToken(); for(int i=0; i<=N; i++) M[i] = Integer.parseInt(s1.nextToken());
+			//read lambda
+		    s1 = new StringTokenizer(input.readLine(), "\t");
+		    s1.nextToken(); lambda = Double.parseDouble(s1.nextToken());
+	        //read alpha
+		    alpha = new double[N+1];
+		    s1 = new StringTokenizer(input.readLine(), "\t");
+		    s1.nextToken(); for(int i=0; i<=N; i++) alpha[i] = Double.parseDouble(s1.nextToken());
+	        //read mu
+		    mu = new double[N+1];
+		    s1 = new StringTokenizer(input.readLine(), "\t");
+		    s1.nextToken(); for(int i=0; i<=N; i++) mu[i] = Double.parseDouble(s1.nextToken());
+			//read lost cost
+		    s1 = new StringTokenizer(input.readLine(), "\t");
+		    s1.nextToken(); lostCost = Double.parseDouble(s1.nextToken());
+	        //read costs
+		    engineerPartCost = new double[N+1];
+		    s1 = new StringTokenizer(input.readLine(), "\t");
+		    s1.nextToken(); for(int i=0; i<=N; i++) engineerPartCost[i] = Double.parseDouble(s1.nextToken());
+		} catch (IOException e) {
+			System.err.println("Problem with input file: reading file, check the format");
+			e.printStackTrace();
+	        System.exit(1);		
+	    }		
+		
+		ServiceEngineersOptimizationGUROBI opt = new ServiceEngineersOptimizationGUROBI(lambda, mu, alpha, lostCost, engineerPartCost, M, true);
+
+		try {
+			opt.StartTimer();		
+			opt.formLP(null);
+
+			opt.optimize();
+			opt.printIndicatorSums();
+			
+			opt.cleanupModel();
+
+		
+		} catch (GRBException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}		
 	
 	
 	};
