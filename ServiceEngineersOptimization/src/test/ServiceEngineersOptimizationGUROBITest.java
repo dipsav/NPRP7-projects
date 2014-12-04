@@ -2,7 +2,6 @@ package test;
 
 import static org.junit.Assert.*;
 import gurobi.GRBException;
-import ilog.concert.IloException;
 
 import org.junit.Test;
 
@@ -11,15 +10,16 @@ import OptimizationProblem.ServiceEngineersOptimizationGUROBI;
 public class ServiceEngineersOptimizationGUROBITest extends ServiceEngineersOptimizationGUROBI{
 
 	public ServiceEngineersOptimizationGUROBITest() {
-		super(0, null, null, 0, null, null, false);
+		super(0, null, null, null, null, null, null, false);
 	}
 
 	//@Test
 	public void testGetIndexFunctions() {
-		int[] truncation_levels={3,3,3,4};
+		int[] truncation_levels_lw={0,0,0,0};
+		int[] truncation_levels_up={3,3,3,4};
 		double[] mu={0,0,0,0};
 		
-		ServiceEngineersOptimizationGUROBI obj = new ServiceEngineersOptimizationGUROBI(0, mu, null, 0, null, truncation_levels, true);
+		ServiceEngineersOptimizationGUROBI obj = new ServiceEngineersOptimizationGUROBI(0, mu, null, null, null, truncation_levels_lw, truncation_levels_up, true);
 				
 		int[] n = {1,1,1,4};
 		int k = obj.getIndex(n);
@@ -32,18 +32,19 @@ public class ServiceEngineersOptimizationGUROBITest extends ServiceEngineersOpti
 
 	//@Test
 	public void testFormulation() throws GRBException {
-		int[] truncation_levels={50,50};
+		int[] truncation_levels_lw={0,0};
+		int[] truncation_levels_up={50,50};
 		double lambda = 10.0;
 		double[] mu={1.0,3.0};
 		double[] alpha = {0.0, 1.0};
-		double lostCost = 300;
+		double[] lostCost = {0.0, 300};
 		double[] engineerPartCost = {1.0, 1.0};
 		
-		ServiceEngineersOptimizationGUROBI obj = new ServiceEngineersOptimizationGUROBI(lambda, mu, alpha, lostCost, engineerPartCost, truncation_levels, true);
+		ServiceEngineersOptimizationGUROBI obj = new ServiceEngineersOptimizationGUROBI(lambda, mu, alpha, lostCost, engineerPartCost, truncation_levels_lw, truncation_levels_up, true);
 				
 		obj.formLP(null);
 		
-		int[] n={1,1};
+		//int[] n={1,1};
 		//obj.addIndicatorLimits(n);
 		obj.exportModel();
 		
@@ -62,14 +63,15 @@ public class ServiceEngineersOptimizationGUROBITest extends ServiceEngineersOpti
 	
 	@Test
 	public void testMultiDimentional() throws GRBException {
-		int[] truncation_levels={30,8,8,8,8};
+		int[] truncation_levels_lw={0,0,0,0,0};
+		int[] truncation_levels_up={30,8,8,8,8};
 		double lambda = 10.0;
 		double[] mu={1.0, 3.0, 2.0, 3.0, 2.0};
 		double[] alpha = {0.0, 0.2, 0.3, 0.2, 0.3};
-		double lostCost = 300;
+		double[] lostCost = {0.0, 300, 300, 300, 300};
 		double[] engineerPartCost = {1.0, 1.0, 1.0, 1.0, 1.0};
 		
-		ServiceEngineersOptimizationGUROBI obj = new ServiceEngineersOptimizationGUROBI(lambda, mu, alpha, lostCost, engineerPartCost, truncation_levels, true);
+		ServiceEngineersOptimizationGUROBI obj = new ServiceEngineersOptimizationGUROBI(lambda, mu, alpha, lostCost, engineerPartCost, truncation_levels_lw, truncation_levels_up, true);
 		obj.StartTimer();		
 		
 		obj.formLP(null);
@@ -91,7 +93,7 @@ public class ServiceEngineersOptimizationGUROBITest extends ServiceEngineersOpti
 			obj.printIndicatorShort();
 			//obj.printIndicatorSums();
 			ready = obj.doIteration();
-			obj.ElapsedTime();
+			obj.ElapsedTime("");
 		}
 
 		//obj.addIndicatorLimits(ll,null);
