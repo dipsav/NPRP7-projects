@@ -1,10 +1,9 @@
 package OptimizationProblem;
 
 import gurobi.*;
-import ilog.concert.IloException;
-import ilog.cplex.IloCplex.UnknownObjectException;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -45,8 +44,8 @@ public class ServiceEngineersOptimizationGUROBI {
     long computation_time;
 
     
-    public static String workpath = "D:/Users/as14446/Documents/Service Engineers";
-    static String defaultParamFile = workpath + "/gurobiParameters.prm";
+    public static String workpath;// = "D:/Users/as14446/Documents/Service Engineers";
+    public static String defaultParamFile;// = workpath + "/gurobiParameters.prm";
 
 
 	public ServiceEngineersOptimizationGUROBI(int N, double lambda[], double[] mu, double[] lostCost, 
@@ -99,10 +98,19 @@ public class ServiceEngineersOptimizationGUROBI {
 		boolean logging = true;
 		
 			
-		String inputFileName = "D:/Users/as14446/Documents/Service Engineers/input.txt"; //args[0];
+		String inputFileName = args[0]; //"D:/Users/as14446/Documents/Service Engineers/input.txt"; //args[0];
+		
+
+		
 		BufferedReader input = null;
 		try {
-			input = new BufferedReader(new InputStreamReader(new FileInputStream(inputFileName), "utf-8"));
+			File file = new File(inputFileName);
+			String absolutePath = file.getAbsolutePath();
+		    workpath = absolutePath.substring(0,absolutePath.lastIndexOf(File.separator));
+		    defaultParamFile = workpath + "/gurobiParameters.prm";
+
+
+		    input = new BufferedReader(new InputStreamReader(new FileInputStream(inputFileName), "utf-8"));
 		} catch (UnsupportedEncodingException | FileNotFoundException e) {
 			System.err.println("Problem with input file: openning file");
 			e.printStackTrace();
