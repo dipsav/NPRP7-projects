@@ -34,13 +34,13 @@ public class ServiceEngineersOptimizationGUROBITest extends ServiceEngineersOpti
 	public void testFormulation() throws GRBException {
 		int[] truncation_levels_lw={0,0};
 		int[] truncation_levels_up={50,50};
-		double lambda = 10.0;
+		double[] lambda = {10.0, 10.0};
 		double[] mu={1.0,3.0};
-		double[] alpha = {0.0, 1.0};
+		//double[] alpha = {0.0, 1.0};
 		double[] lostCost = {0.0, 300};
 		double[] engineerPartCost = {1.0, 1.0};
 		
-		ServiceEngineersOptimizationGUROBI obj = new ServiceEngineersOptimizationGUROBI(lambda, mu, alpha, lostCost, engineerPartCost, truncation_levels_lw, truncation_levels_up, true);
+		ServiceEngineersOptimizationGUROBI obj = new ServiceEngineersOptimizationGUROBI(1, lambda, mu, lostCost, engineerPartCost, truncation_levels_lw, truncation_levels_up, true);
 				
 		obj.formLP(null);
 		
@@ -65,13 +65,13 @@ public class ServiceEngineersOptimizationGUROBITest extends ServiceEngineersOpti
 	public void testMultiDimentional() throws GRBException {
 		int[] truncation_levels_lw={0,0,0,0,0};
 		int[] truncation_levels_up={30,8,8,8,8};
-		double lambda = 10.0;
+		double[] lambda = {10.0, 0, 2.0, 3.0, 2.0, 3.0};
 		double[] mu={1.0, 3.0, 2.0, 3.0, 2.0};
-		double[] alpha = {0.0, 0.2, 0.3, 0.2, 0.3};
+		//double[] alpha = {0.0, 0.2, 0.3, 0.2, 0.3};
 		double[] lostCost = {0.0, 300, 300, 300, 300};
 		double[] engineerPartCost = {1.0, 1.0, 1.0, 1.0, 1.0};
 		
-		ServiceEngineersOptimizationGUROBI obj = new ServiceEngineersOptimizationGUROBI(lambda, mu, alpha, lostCost, engineerPartCost, truncation_levels_lw, truncation_levels_up, true);
+		ServiceEngineersOptimizationGUROBI obj = new ServiceEngineersOptimizationGUROBI(4, lambda, mu, lostCost, engineerPartCost, truncation_levels_lw, truncation_levels_up, true);
 		obj.StartTimer();		
 		
 		obj.formLP(null);

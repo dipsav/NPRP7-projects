@@ -90,7 +90,7 @@ public class ServiceEngineersOptimizationGUROBI {
 		
 		int N = 0; //number of spare types
 		int[] M_lb = null, M_ub=null; //state space truncation limits
-		double lambdaTot = 0; //failure rate;
+		//double lambdaTot = 0; //failure rate;
 		double[] mu = null;   //service lead time service rates, mu[0] corresponds to engenders, the rest to spares
 		double[] lambda = null; //probability that spare i is requested
 		double[] engineerPartCost = null;
