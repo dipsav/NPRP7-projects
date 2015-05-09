@@ -1,5 +1,7 @@
 package OptimizationProblem;
 
+import gurobi.GRB;
+import gurobi.GRBLinExpr;
 import ilog.concert.IloColumn;
 import ilog.concert.IloException;
 import ilog.concert.IloLinearNumExpr;
@@ -11,6 +13,7 @@ import ilog.cplex.IloCplex;
 import ilog.cplex.IloCplex.UnknownObjectException;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -23,10 +26,10 @@ public class ServiceEngineersOptimization {
 	
 	int N; //number of spare types
 	int[] M_lb, M_ub; //state space truncation limits
-	double lambda; //failure rate;
+	double[] lambda; //failure rate;
 	double[] mu;   //service lead time service rates, mu[0] corresponds to engenders, the rest to spares
-	double[] alpha; //probability that spare i is requested
-	double lostCost;
+	//double[] alpha; //probability that spare i is requested
+	double[] lostCost;
 	double engnCost;
 	double[] engineerPartCost;
 	
@@ -38,32 +41,31 @@ public class ServiceEngineersOptimization {
 	int[] optIsum, prevOptIsum;
 	int[] ll, ul;
 		
-	IloNumVar[] p_var, y_var;
+	IloNumVar[] p_var;
+	IloNumVar[][] y_var;
 	
 	double[][] p_mar;
 	
 	IloCplex model;
     
-    public static String workpath = "D:/Users/as14446/Documents/Service Engineers";
-    static String defaultParamFile = workpath + "/cplexParameters";
+    public static String workpath;// = "D:/Users/as14446/Documents/Service Engineers";
+    static String defaultParamFile;// = workpath + "/cplexParameters";
 
     Date startTime, endTime;
     long computation_time;
     
-    public ServiceEngineersOptimization(double lambda, double[] mu, double[] alpha, double lostCost, 
+    public ServiceEngineersOptimization(int nparts, double[] lambda, double[] mu, double[] lostCost, 
 
 			double[] engineerPartCost, int[] trunc_level_lb, int[] trunc_level_ub, boolean logging) {
 		super();
-		try {
-			N = trunc_level_ub.length - 1;
-		} catch (Exception e) {
-			N=-1;
-		}
+		
+		N=nparts;
+		
 		this.M_ub = trunc_level_ub;
 		this.M_lb = trunc_level_lb;
 		this.lambda = lambda;
 		this.mu = mu;
-		this.alpha = alpha;
+		//this.alpha = alpha;
 		
 		this.lostCost = lostCost;
 		this.engineerPartCost = engineerPartCost;
@@ -91,17 +93,22 @@ public class ServiceEngineersOptimization {
 	
 		int N = 0; //number of spare types
 		int[] M_lb = null, M_ub=null; //state space truncation limits
-		double lambda = 0; //failure rate;
+		double[] lambda = null; //failure rate;
 		double[] mu = null;   //service lead time service rates, mu[0] corresponds to engenders, the rest to spares
-		double[] alpha = null; //probability that spare i is requested
+		//double[] alpha = null; //probability that spare i is requested
 		double[] engineerPartCost = null;
-		double lostCost = 0;
+		double[] lostCost = null;
 		boolean logging = true;
 		
 			
-		String inputFileName = "D:/Users/as14446/Documents/Service Engineers/input.txt"; //args[0];
+		String inputFileName = args[0]; //"D:/Users/as14446/Documents/Service Engineers/input.txt"; //args[0];
 		BufferedReader input = null;
 		try {
+			File file = new File(inputFileName);
+			String absolutePath = file.getAbsolutePath();
+		    workpath = absolutePath.substring(0,absolutePath.lastIndexOf(File.separator));
+		    defaultParamFile = workpath + "/gurobiParameters.prm";
+
 			input = new BufferedReader(new InputStreamReader(new FileInputStream(inputFileName), "utf-8"));
 		} catch (UnsupportedEncodingException | FileNotFoundException e) {
 			System.err.println("Problem with input file: openning file");
@@ -124,19 +131,26 @@ public class ServiceEngineersOptimization {
 		    s1 = new StringTokenizer(input.readLine(), "\t");
 		    s1.nextToken(); for(int i=0; i<=N; i++) M_ub[i] = Integer.parseInt(s1.nextToken());
 			//read lambda
+		    //s1 = new StringTokenizer(input.readLine(), "\t");
+		    //s1.nextToken(); lambda = Double.parseDouble(s1.nextToken());
+		    lambda = new double[N+1];
 		    s1 = new StringTokenizer(input.readLine(), "\t");
-		    s1.nextToken(); lambda = Double.parseDouble(s1.nextToken());
+		    s1.nextToken(); for(int i=0; i<=N; i++) lambda[i] = Double.parseDouble(s1.nextToken());
+		    lambda[0] = 0; for(int i=1; i<=N; i++)  lambda[0] += lambda[i];
 	        //read alpha
-		    alpha = new double[N+1];
-		    s1 = new StringTokenizer(input.readLine(), "\t");
-		    s1.nextToken(); for(int i=0; i<=N; i++) alpha[i] = Double.parseDouble(s1.nextToken());
+		    //alpha = new double[N+1];
+		    //s1 = new StringTokenizer(input.readLine(), "\t");
+		    //s1.nextToken(); for(int i=0; i<=N; i++) alpha[i] = Double.parseDouble(s1.nextToken());
 	        //read mu
 		    mu = new double[N+1];
 		    s1 = new StringTokenizer(input.readLine(), "\t");
 		    s1.nextToken(); for(int i=0; i<=N; i++) mu[i] = Double.parseDouble(s1.nextToken());
 			//read lost cost
+		    //s1 = new StringTokenizer(input.readLine(), "\t");
+		    //s1.nextToken(); lostCost = Double.parseDouble(s1.nextToken());
+		    lostCost = new double[N+1];
 		    s1 = new StringTokenizer(input.readLine(), "\t");
-		    s1.nextToken(); lostCost = Double.parseDouble(s1.nextToken());
+		    s1.nextToken(); for(int i=0; i<=N; i++) lostCost[i] = Double.parseDouble(s1.nextToken());
 	        //read costs
 		    engineerPartCost = new double[N+1];
 		    s1 = new StringTokenizer(input.readLine(), "\t");
@@ -150,13 +164,15 @@ public class ServiceEngineersOptimization {
 	        System.exit(1);		
 	    }		
 		
-		ServiceEngineersOptimization opt = new ServiceEngineersOptimization(lambda, mu, alpha, lostCost, engineerPartCost, M_lb, M_ub, logging);
+		N=4;
+		
+		ServiceEngineersOptimization opt = new ServiceEngineersOptimization(N, lambda, mu, lostCost, engineerPartCost, M_lb, M_ub, logging);
 
 		try {
 			opt.StartTimer();
 			opt.ElapsedTime("Starting");
 			
-			opt.formLPbyRows();
+			opt.formLP();//byRows();
 			opt.ElapsedTime("MIP is formed");
 			
 			opt.setStartSolution();
@@ -175,6 +191,7 @@ public class ServiceEngineersOptimization {
 			boolean ready = false;
 			while(!ready){
 				//obj.exportModel();
+				//opt.setLoggingOff();
 				System.out.println("Curent objective: " + opt.optimize());
 				opt.printIndicatorShort();
 				ready = opt.doIteration();
@@ -198,8 +215,8 @@ public class ServiceEngineersOptimization {
 	
 	public void formLP() throws IloException{
 	    IloRange[] constraint;
-	    IloColumn[] p_column, y_column;
-	    IloColumn[][] I_column;
+	    IloColumn[] p_column;
+	    IloColumn[][] I_column, y_column;
 
 	    model = new IloCplex();
 		if(!logging){
@@ -208,10 +225,10 @@ public class ServiceEngineersOptimization {
 		}
         constraint = new IloRange[M_max+1];
         p_column   = new IloColumn[M_max+1];
-        y_column   = new IloColumn[M_max+1];
+        y_column   = new IloColumn[N+1][M_max+1];
         
         p_var 	   = new IloNumVar[M_max+1];	
-        y_var 	   = new IloNumVar[M_max+1];	
+        y_var 	   = new IloNumVar[N+1][M_max+1];	
 
         I_column   = new IloColumn[N+1][];	
         I_var      = new IloNumVar[N+1][];	
@@ -236,12 +253,20 @@ public class ServiceEngineersOptimization {
         	int[] n = getIndices(i);
         	String varIndex = "";  for(int j=0; j<=N; j++) varIndex += n[j];
         	
+        	double tmpCost=0;
         	p_var[i] = model.numVar(0.0, 1.0, IloNumVarType.Float, "p" + varIndex);
-        	y_var[i] = model.numVar(0.0, 1.0, IloNumVarType.Float, "y" + varIndex);
         	
-    		p_column[i] = model.column(cost, lostCost); //TODO update coefficient
+        	for(int j=1; j<=N; j++){ 
+        		tmpCost += lostCost[j]*lambda[j];
+            	y_var[j][i] = model.numVar(0.0, 1.0, IloNumVarType.Float, "y" + j + varIndex);
+        		y_column[j][i] = model.column(cost, -lostCost[j]*lambda[j]); //TODO update coefficient
+        		//y_var[j][i] = model.addVar(0, 1, -lostCost[j]*lambda[j], GRB.CONTINUOUS, "y" + j + varIndex);
+            }
         	
-        	y_column[i] = model.column(cost, -lostCost); //TODO update coefficient
+    		p_column[i] = model.column(cost, tmpCost); //TODO update coefficient
+    		
+
+        	
 
         	//normalization constraint
         	p_column[i] = p_column[i].and( model.column(norm_constraint, 1.0));
@@ -250,7 +275,10 @@ public class ServiceEngineersOptimization {
         	//equilibrium constraints
         	constraint[i] = model.addEq(null, 0.0, "eqConst"+varIndex);
         	
-        	y_column[i] = y_column[i].and(model.column(constraint[i], lambda));
+        	for(int j=1; j<=N; j++){ 
+        		//y_column[j][i] = model.column(cost, -lostCost[j]*lambda[j]); //TODO update coefficient
+            	y_column[j][i] = y_column[j][i].and(model.column(constraint[i], lambda[j]));
+            }
         	double coeff = 0;
         	for(int j=0; j<=N; j++){
         		coeff += n[j]*mu[j];
@@ -268,16 +296,16 @@ public class ServiceEngineersOptimization {
         		n[j]--;
             	int i1 = getIndex(n);
             	if(i1>=0)
-            		y_column[i1] = y_column[i1].and(model.column(constraint[i], -lambda*alpha[j]));
+            		y_column[j][i1] = y_column[j][i1].and(model.column(constraint[i], -lambda[j]));
             	n[j]++;
         	}
         	n[0]++;        	
         	
         	// y_{ne,ns} <= p_{ne,ns}
-        	{
-            	IloRange tmp_const = model.addLe(null, 0.0, "yLep_const" + varIndex);
+        	for(int j=1; j<=N; j++){
+            	IloRange tmp_const = model.addLe(null, 0.0, "yLep_const" + j + varIndex);
             	p_column[i] = p_column[i].and(model.column(tmp_const, -1.0));
-	        	y_column[i] = y_column[i].and(model.column(tmp_const, 1.0));
+	        	y_column[j][i] = y_column[j][i].and(model.column(tmp_const, 1.0));
         	}
         	
         	// p_{ne,ns} <= I_ne and p_{ne,ns} <= I_ns
@@ -288,19 +316,22 @@ public class ServiceEngineersOptimization {
             }
 
         	// y_{ne,ns} <= I_{ne+1} and p_{ne,ns} <= I_{ns+1}
-        	for(int i1=0; i1<=N; i1++){
-            	IloRange tmp_const = model.addLe(null, 0.0, "yIconst" + varIndex + i1);
-            	y_column[i] = y_column[i].and(model.column(tmp_const, 1.0));
-            	if(n[i1]<M_ub[i1]) I_column[i1][n[i1]+1] = I_column[i1][n[i1]+1].and(model.column(tmp_const, -1.0));
+        	for(int i1=1; i1<=N; i1++){
+            	IloRange tmp_const1 = model.addLe(null, 0.0, "y0const" + varIndex + i1);
+            	IloRange tmp_const2 = model.addLe(null, 0.0, "yIconst" + varIndex + i1);
+            	y_column[i1][i] = y_column[i1][i].and(model.column(tmp_const1, 1.0));
+            	y_column[i1][i] = y_column[i1][i].and(model.column(tmp_const2, 1.0));
+            	if(n[0]<M_ub[0]) I_column[0][n[0]+1] = I_column[0][n[0]+1].and(model.column(tmp_const1, -1.0));
+            	if(n[i1]<M_ub[i1]) I_column[i1][n[i1]+1] = I_column[i1][n[i1]+1].and(model.column(tmp_const2, -1.0));
             }
 
         	// y_{ne,ns} <= p_{ne,ns} - (N+1 - I_{ne+1} - sum I_{ns+1}) 
-        	{
-        		IloRange tmp_const = model.addGe(null, -(N+1),  "ypIconst" + varIndex);
+        	for(int j=1; j<=N; j++){
+        		IloRange tmp_const = model.addGe(null, -2,  "ypIconst" + j + varIndex);
 	        	p_column[i] = p_column[i].and(model.column(tmp_const, -1.0));
-	        	y_column[i] = y_column[i].and(model.column(tmp_const, 1.0));
-	        	for(int i1=0; i1<=N; i1++)
-		        	if(n[i1]<M_ub[i1]) I_column[i1][n[i1]+1] = I_column[i1][n[i1]+1].and(model.column(tmp_const, -1.0));
+	        	y_column[j][i] = y_column[j][i].and(model.column(tmp_const, 1.0));
+		        if(n[0]<M_ub[0]) I_column[0][n[0]+1] = I_column[0][n[0]+1].and(model.column(tmp_const, -1.0));
+		        if(n[j]<M_ub[j]) I_column[j][n[j]+1] = I_column[j][n[j]+1].and(model.column(tmp_const, -1.0));
         	}
 
         	
@@ -310,7 +341,8 @@ public class ServiceEngineersOptimization {
         	int[] n = getIndices(i);
         	String varIndex = "";  for(int j=0; j<=N; j++) varIndex += n[j];
         	p_var[i] = model.numVar(p_column[i], 0, 1, IloNumVarType.Float, "p" + varIndex);
-        	y_var[i] = model.numVar(y_column[i], 0, 1, IloNumVarType.Float, "y" + varIndex);
+        	for(int j=1; j<=N; j++)
+        		y_var[j][i] = model.numVar(y_column[j][i], 0, 1, IloNumVarType.Float, "y" + j + varIndex);
         }
 
     	for(int i=0; i<=N; i++)
@@ -338,7 +370,7 @@ public class ServiceEngineersOptimization {
         constraint = new IloLinearNumExpr[M_max+1];
         
         p_var 	   = new IloNumVar[M_max+1];	
-        y_var 	   = new IloNumVar[M_max+1];	
+        y_var 	   = new IloNumVar[N+1][M_max+1];	
 
         I_var      = new IloNumVar[N+1][];	
 		for(int i=0; i<=N; i++){ 
@@ -362,10 +394,16 @@ public class ServiceEngineersOptimization {
         	String varIndex = "";  for(int j=0; j<=N; j++) varIndex += n[j];
         	
         	p_var[i] = model.numVar(0.0, 1.0, IloNumVarType.Float, "p" + varIndex);
-        	y_var[i] = model.numVar(0.0, 1.0, IloNumVarType.Float, "y" + varIndex);
+        	for(int j=0; j<=N; j++)
+        		y_var[j][i] = model.numVar(0.0, 1.0, IloNumVarType.Float, "y" + j + varIndex);
         	
-        	cost.addTerm(lostCost, p_var[i]); //TODO update coefficient
-        	cost.addTerm(-lostCost, y_var[i]); //TODO update coefficient
+        	double tmpCost=0;
+        	for(int j=1; j<=N; j++){ 
+        		tmpCost += lostCost[j]*lambda[j];
+            	cost.addTerm(-lostCost[j]*lambda[j], y_var[j][i]); //TODO update coefficient
+            }
+        	cost.addTerm(tmpCost, p_var[i]); //TODO update coefficient
+
         	
         	//normalization constraint
         	norm_constraint.addTerm(1.0, p_var[i]);
@@ -373,7 +411,8 @@ public class ServiceEngineersOptimization {
         	//equilibrium constraints
         	constraint[i] = model.linearNumExpr();
         	
-        	constraint[i].addTerm(lambda, y_var[i]);
+        	for(int j=0; j<=N; j++)
+        		constraint[i].addTerm(lambda[j], y_var[j][i]);
         	double coeff = 0;
         	for(int j=0; j<=N; j++){
         		coeff += n[j]*mu[j];
@@ -390,17 +429,17 @@ public class ServiceEngineersOptimization {
         		n[j]--;
             	int i1 = getIndex(n);
             	if(i1>=0)
-            		constraint[i].addTerm(-lambda*alpha[j], y_var[i1]);
+            		constraint[i].addTerm(-lambda[j], y_var[j][i1]);
             	n[j]++;
         	}
         	n[0]++;        	
         	
         	// y_{ne,ns} <= p_{ne,ns}
-        	{
+        	for(int j=1; j<=N; j++){
             	IloLinearNumExpr tmp_const = model.linearNumExpr();
             	tmp_const.addTerm(-1.0, p_var[i]);
-            	tmp_const.addTerm( 1.0, y_var[i]);
-            	model.addLe(tmp_const, 0.0, "yLep_const" + varIndex);
+            	tmp_const.addTerm( 1.0, y_var[j][i]);
+            	model.addLe(tmp_const, 0.0, "yLep_const" + j + varIndex);
         	}
         	
         	// p_{ne,ns} <= I_ne and p_{ne,ns} <= I_ns
@@ -410,24 +449,29 @@ public class ServiceEngineersOptimization {
             	tmp_const.addTerm(-1.0, I_var[i1][n[i1]]);
             	model.addLe(tmp_const, 0.0, "pIconst" + varIndex + i1);
             }
-
+        	
         	// y_{ne,ns} <= I_{ne+1} and p_{ne,ns} <= I_{ns+1}
         	for(int i1=0; i1<=N; i1++){
-        		IloLinearNumExpr tmp_const = model.linearNumExpr();
-        		tmp_const.addTerm( 1.0, y_var[i]);
-        		if(n[i1]<M_ub[i1]) tmp_const.addTerm( -1.0, I_var[i1][n[i1]+1]); 
-            	model.addLe(tmp_const, 0.0, "yIconst" + varIndex + i1);
+        		IloLinearNumExpr tmp_const1 = model.linearNumExpr();
+        		IloLinearNumExpr tmp_const2 = model.linearNumExpr();
+        		tmp_const1.addTerm( 1.0, y_var[i1][i]);
+        		tmp_const2.addTerm( 1.0, y_var[i1][i]);
+        		if(n[0]<M_ub[0]) tmp_const1.addTerm( -1.0, I_var[0][n[0]+1]); 
+        		if(n[i1]<M_ub[i1]) tmp_const2.addTerm( -1.0, I_var[i1][n[i1]+1]); 
+            	model.addLe(tmp_const1, 0.0, "y0const" + varIndex + i1);
+            	model.addLe(tmp_const2, 0.0, "yIconst" + varIndex + i1);
             }
 
         	// y_{ne,ns} <= p_{ne,ns} - (N+1 - I_{ne+1} - sum I_{ns+1}) 
-        	{
+        	for(int j=1; j<=N; j++){
         		IloLinearNumExpr tmp_const = model.linearNumExpr();
             	tmp_const.addTerm(-1.0, p_var[i]);
-            	tmp_const.addTerm( 1.0, y_var[i]);
-	        	for(int i1=0; i1<=N; i1++)
-		        	if(n[i1]<M_ub[i1]) tmp_const.addTerm( -1.0, I_var[i1][n[i1]+1]);
-            	model.addGe(tmp_const, -(N+1), "ypIconst" + varIndex);
+            	tmp_const.addTerm( 1.0, y_var[j][i]);
+	        	if(n[0]<M_ub[0]) tmp_const.addTerm( -1.0, I_var[0][n[0]+1]);
+	        	if(n[j]<M_ub[j]) tmp_const.addTerm( -1.0, I_var[j][n[j]+1]);
+            	model.addGe(tmp_const, -0, "ypIconst" + j + varIndex);
         	}
+        	
     	}
 
     	for(int i=0; i<M_max; i++){
@@ -543,7 +587,9 @@ public class ServiceEngineersOptimization {
     	for(int i=0; i<M_max; i++){
         	int[] n = getIndices(i);	
         	for(int j=0; j<=N; j++) System.out.print(n[j]);
-        	System.out.println("\t" + model.getValue(y_var[i]));
+        	System.out.print("\t");
+        	for(int j=0; j<=N; j++) System.out.print(model.getValue(y_var[j][i]));
+        	System.out.println();
     	}
     }
     public void printPvariables() throws UnknownObjectException, IloException{

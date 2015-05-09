@@ -122,11 +122,14 @@ public class ServiceEngineersOptimizationGUROBI {
 		try {
 			//read N
 		    s1 = new StringTokenizer(input.readLine(), "\t");
-		    s1.nextToken(); N = Integer.parseInt(s1.nextToken());
+		    s1.nextToken(); 
+		    N = Integer.parseInt(s1.nextToken());
 	        //read M[i]
 		    M_lb = new int[N+1];
 		    s1 = new StringTokenizer(input.readLine(), "\t");
-		    s1.nextToken(); for(int i=0; i<=N; i++) M_lb[i] = Integer.parseInt(s1.nextToken());
+		    s1.nextToken(); 
+		    for(int i=0; i<=N; i++) 
+		    	M_lb[i] = Integer.parseInt(s1.nextToken());
 		    M_ub = new int[N+1];
 		    s1 = new StringTokenizer(input.readLine(), "\t");
 		    s1.nextToken(); for(int i=0; i<=N; i++) M_ub[i] = Integer.parseInt(s1.nextToken());
@@ -161,10 +164,12 @@ public class ServiceEngineersOptimizationGUROBI {
 		
 
 		
-		for(int nparts=1; nparts<=6; nparts++ )
+		//for(int nparts=5; nparts<=5; nparts++ )
+		int nparts=4;
 		{
 			ServiceEngineersOptimizationGUROBI opt = new ServiceEngineersOptimizationGUROBI(nparts, lambda, mu, lostCost, engineerPartCost, M_lb, M_ub, logging);
 		try {
+			N=nparts;
 			
 			opt.StartTimer();
 			opt.ElapsedTime("Starting");
@@ -173,25 +178,27 @@ public class ServiceEngineersOptimizationGUROBI {
 			opt.ElapsedTime("MIP is formed");
 			
 			opt.setStartSolution(1);
-			opt.setParameters();
+			//opt.setParameters();
 			
 			int[] ll= new int[N+1];
 			int[] ul= new int[N+1];
 			for(int i=0; i<=N; i++){
 				ll[i] = Math.max(0, M_lb[i]);
 				ul[i] = Math.min(ll[i]+2, M_ub[i]);
+				//ul[i] = Math.min(10, M_ub[i]);
 			}
 			opt.setIndicatorLimits(ll,ul);
 			opt.exportModel();
 			
 			opt.setLoggingOff();
 			
+			//opt.tuneModel(defaultParamFile);
 			opt.ElapsedTime("Start Solving");
 			boolean ready = false;
 			while(!ready){
 				opt.exportModel();
 				System.out.println("Curent objective: " + opt.optimize());
-				opt.printIndicatorShort();
+				//opt.printIndicatorShort();
 				ready = opt.doIteration();
 				opt.ElapsedTime("");
 			}
@@ -399,6 +406,7 @@ public class ServiceEngineersOptimizationGUROBI {
         		GRBLinExpr tmp_const = new GRBLinExpr();
         		tmp_const.addTerm(1.0, I_var[i][j]);
         		if(j<M_ub[i]) tmp_const.addTerm(-1.0, I_var[i][j+1]);
+        		//for(int k=j+1; k<=M_ub[i]; k++) tmp_const.addTerm(-1.0, I_var[i][k]);
             	model.addConstr(tmp_const, GRB.GREATER_EQUAL, 0.0, "IIconst" + i+j);
         	}
 
@@ -462,6 +470,9 @@ public class ServiceEngineersOptimizationGUROBI {
     
 	public boolean doIteration() throws GRBException{
 		boolean ready = true;
+		printArrayShort(ll);
+		printArrayShort(optIsum);
+		printArrayShort(ul);
 		for(int i=0; i<=N; i++){
 			if(optIsum[i] == ul[i] && ul[i]<M_ub[i]){
 				ul[i]++; ll[i]++;
@@ -472,6 +483,10 @@ public class ServiceEngineersOptimizationGUROBI {
 			}
 		}
 		if(!ready) this.setIndicatorLimits(this.ll, this.ul);
+		System.out.println("updated array");
+		printArrayShort(ll);
+		printArrayShort(optIsum);
+		printArrayShort(ul);
 		return ready;
 	}
     
@@ -491,9 +506,15 @@ public class ServiceEngineersOptimizationGUROBI {
         	else     System.out.println("Number of Parts "+i+":   " + sum);
     	}
     }
-    public void printIndicatorShort(){
-    	for(int i=0; i<=N; i++) System.out.print(optIsum[i] + "\t");
+    public void printArrayShort(int[] arr){
+    	for(int i=0; i<arr.length; i++) System.out.print(arr[i] + "\t");
     	System.out.println();
+    }
+    
+    public void printIndicatorShort(){
+    	printArrayShort(optIsum);
+    	//for(int i=0; i<=N; i++) System.out.print(optIsum[i] + "\t");
+    	//System.out.println();
     }
     public void printYvariables() throws GRBException{
     	for(int i=0; i<M_max; i++){

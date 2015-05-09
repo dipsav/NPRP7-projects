@@ -11,7 +11,7 @@ import OptimizationProblem.ServiceEngineersOptimization;
 public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimization{
 
 	public ServiceEngineersOptimizationTest() {
-		super(0, null, null, 0, null, null, null, false);
+		super(0, null, null, null, null, null, null, false);
 	}
 
 	//@Test
@@ -19,7 +19,7 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 		int[] truncation_levels={3,3,3,4};
 		double[] mu={0,0,0,0};
 		
-		ServiceEngineersOptimization obj = new ServiceEngineersOptimization(0, null, mu, 0, null, truncation_levels, truncation_levels, true);
+		ServiceEngineersOptimization obj = new ServiceEngineersOptimization(0, null, mu, null, null, truncation_levels, truncation_levels, true);
 				
 		int[] n = {1,1,1,4};
 		int k = obj.getIndex(n);
@@ -36,7 +36,7 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 		double[] lambda = {10.0, 10.0};
 		double[] mu={1.0,3.0};
 		//double[] alpha = {0.0, 1.0};
-		double lostCost = 300;
+		double[] lostCost = {300, 300};
 		double[] engineerPartCost = {1.0, 1.0};
 		
 		ServiceEngineersOptimization obj = new ServiceEngineersOptimization(1, lambda, mu, lostCost, engineerPartCost, truncation_levels, truncation_levels, true);
@@ -68,7 +68,7 @@ public class ServiceEngineersOptimizationTest extends ServiceEngineersOptimizati
 		double[] lambda = {10.0, 2.0, 3.0, 2.0, 3.0};
 		double[] mu={1.0, 3.0, 2.0, 3.0, 2.0};
 		//double[] alpha = {0.0, 0.2, 0.3, 0.2, 0.3};
-		double lostCost = 300;
+		double[] lostCost = {300, 300};
 		double[] engineerPartCost = {1.0, 1.0, 1.0, 1.0, 1.0};
 				
 		ServiceEngineersOptimization obj = new ServiceEngineersOptimization(4, lambda, mu, lostCost, engineerPartCost, truncation_levels, truncation_levels, true);
